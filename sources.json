@@ -1,10 +1,6 @@
 [
     {"source": "app/assistants/stage-assistant.js"},
     {
-        "scenes": "first",
-        "source": "app/assistants/first-assistant.js"
-    },
-    {
         "scenes": "settings",
         "source": "app/assistants/settings-assistant.js"
     }
