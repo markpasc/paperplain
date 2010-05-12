@@ -8,10 +8,23 @@ def call(*args, **kwargs):
 
 
 @task
-def push():
-    """Install the app and start it."""
+def build():
+    """Package up the app."""
     call('palm-package', '.')
+
+@task
+def halt():
+    call('palm-launch', '--device=emulator', '-c', 'org.markpasc.paperplain')
+
+@task
+@needs('halt')
+def uninstall():
     call('palm-install', '--device=emulator', '-r', 'org.markpasc.paperplain')
+
+@task
+@needs('build', 'uninstall')
+def push():
+    """Reinstall the app and start it."""
     call('palm-install', '--device=emulator', 'org.markpasc.paperplain_1.0.0_all.ipk')
     call('palm-launch', '--device=emulator', 'org.markpasc.paperplain')
 
