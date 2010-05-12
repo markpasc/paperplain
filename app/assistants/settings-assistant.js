@@ -61,6 +61,13 @@ SettingsAssistant.prototype.handleEnable = function(event) {
     if (event.value) {
         // Set up the timer subscription?
         Mojo.Log.info("Trying to schedule paper swapping");
+
+        var now = new Date();
+        var then = now.getTime() + 10 * 1000;  // 10 seconds
+        var alarmTime = new Date(then);
+        var alarmAt = [alarmTime.getUTCMonth()+1, alarmTime.getUTCDate(), alarmTime.getUTCFullYear()].join('/')
+            + ' ' + [alarmTime.getUTCHours(), alarmTime.getUTCMinutes(), alarmTime.getUTCSeconds()].join(':')
+
         this.controller.serviceRequest("palm://com.palm.power/timeout", {
             method: "set",
             parameters: {
@@ -68,7 +75,7 @@ SettingsAssistant.prototype.handleEnable = function(event) {
                 key: "org.markpasc.paperplain.activate",
                 uri: "palm://com.palm.applicationManager/launch",
                 params: '{id:"org.markpasc.paperplain", params:{"action":"swappaper"}}',
-                'in': "00:05:00"
+                at: alarmAt,
             },
             onSuccess: this.enabled.bind(this),
             onFailure: this.errorEnabling.bind(this),
