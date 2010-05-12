@@ -21,16 +21,13 @@ SettingsAssistant.prototype.setup = function() {
 
 SettingsAssistant.prototype.enabled = function (obj) {
     this.controller.get('enabled-spinner').mojo.stop(); //addClassName('hidden');
-    this.controller.showAlertDialog({
-        title: $L("SUCCESS"),
-        message: "yay",
-        choices: [{label:$L('Dismiss'), value:'dismiss', type:'secondary'}]
-    });
+    Mojo.Log.info("Enabled paper swapping");
 };
 
 SettingsAssistant.prototype.errorEnabling = function (oops) {
     this.controller.get('enabled-spinner').mojo.stop(); //addClassName('hidden');
     this.enabledModel.value = false;
+    Mojo.Log.error("Couldn't enable paper swapping: " + oops.errorText);
     this.controller.showAlertDialog({
         title: $L("Oops, couldn't enable"),
         message: oops.errorText,
@@ -40,11 +37,13 @@ SettingsAssistant.prototype.errorEnabling = function (oops) {
 
 SettingsAssistant.prototype.disabled = function (obj) {
     this.controller.get('enabled-spinner').addClassName('hidden');
+    Mojo.Log.info("Disabled paper swapping");
 };
 
 SettingsAssistant.prototype.errorDisabling = function (oops) {
     this.controller.get('enabled-spinner').addClassName('hidden');
     this.enabledModel.value = true;
+    Mojo.Log.error("Couldn't disable paper swapping: " + oops.errorText);
     this.controller.showAlertDialog({
         title: $L("Oops, couldn't disable"),
         message: oops.errorText,
@@ -61,6 +60,7 @@ SettingsAssistant.prototype.handleEnable = function(event) {
 
     if (event.value) {
         // Set up the timer subscription?
+        Mojo.Log.info("Trying to schedule paper swapping");
         this.controller.serviceRequest("palm://com.palm.power/timeout", {
             method: "set",
             parameters: {
@@ -76,6 +76,7 @@ SettingsAssistant.prototype.handleEnable = function(event) {
     }
     else {
         // Delete the timer subscription.
+        Mojo.Log.info("Trying to unschedule paper swapping");
         this.controller.serviceRequest("palm://com.palm.power/timeout", {
             method: "clear",
             parameters: {
