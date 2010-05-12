@@ -74,7 +74,10 @@ MainAssistant.prototype.handleEnable = function(event) {
                 wakeup: false,
                 key: "org.markpasc.paperplain.activate",
                 uri: "palm://com.palm.applicationManager/launch",
-                params: '{id:"org.markpasc.paperplain", params:{"action":"swappaper"}}',
+                params: {
+                    id: "org.markpasc.paperplain",
+                    params: {"action": "swappaper"},
+                },
                 at: alarmAt,
             },
             onSuccess: this.enabled.bind(this),
