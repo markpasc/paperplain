@@ -71,7 +71,7 @@ SettingsAssistant.prototype.handleEnable = function(event) {
                 'in': "00:05:00"
             },
             onSuccess: this.enabled.bind(this),
-            onFailure: this.errorEnabling.bind(this)
+            onFailure: this.errorEnabling.bind(this),
         });
     }
     else {
@@ -79,10 +79,10 @@ SettingsAssistant.prototype.handleEnable = function(event) {
         this.controller.serviceRequest("palm://com.palm.power/timeout", {
             method: "clear",
             parameters: {
-                key: "org.markpasc.paperplain.activate"
+                key: "org.markpasc.paperplain.activate",
             },
             onSuccess: this.disabled.bind(this),
-            onFailure: this.errorDisabling.bind(this)
+            onFailure: this.errorDisabling.bind(this),
         });
     }
 };
