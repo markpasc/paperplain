@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "vendor": "My Company",
     "type": "web",
+    "noWindow": true,
     "main": "index.html",
     "title": "Paperplain",
     "icon": "icon.png"
