@@ -32,4 +32,7 @@ def push():
 def tail():
     """Follow the device's log."""
     call('palm-log', '--device=emulator', '--system-log-level', 'info')
-    call('palm-log', '--device=emulator', '-f', 'org.markpasc.paperplain')
+    try:
+        call('palm-log', '--device=emulator', '-f', 'org.markpasc.paperplain')
+    except KeyboardInterrupt:
+        print
