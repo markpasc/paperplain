@@ -11,12 +11,17 @@ AppAssistant.prototype.handleLaunch = function (parameters) {
     }
     else if (parameters.action == 'swappaper') {
         Mojo.Log.info("YAY SWAPPAPER ACTION");
-        Mojo.Controller.getAppController().showBanner('O HAI SWAPPY PAPER', {source:'notification'});
+        this.scheduleSwap();
+        this.swapPaper();
     }
     else {
         Mojo.Log.info("Hmm, unrecognized action parameter '" + parameters.action + "'");
     }
 };
+
+AppAssistant.prototype.swapPaper = function () {
+    Mojo.Log.info('SWAPPING WALLPAPER');
+}
 
 AppAssistant.prototype.launchStage = function () {
 
@@ -41,4 +46,39 @@ AppAssistant.prototype.launchStage = function () {
         stageController.pushScene('main');
     });
 
+};
+
+AppAssistant.prototype.scheduleSwap = function (succ, fail) {
+    var now = new Date();
+    var then = now.getTime() + 30 * 1000;  // 30 seconds
+    var alarmTime = new Date(then);
+    var alarmAt = [alarmTime.getUTCMonth()+1, alarmTime.getUTCDate(), alarmTime.getUTCFullYear()].join('/')
+        + ' ' + [alarmTime.getUTCHours(), alarmTime.getUTCMinutes(), alarmTime.getUTCSeconds()].join(':')
+
+    this.reqSchedule = new Mojo.Service.Request("palm://com.palm.power/timeout", {
+        method: "set",
+        parameters: {
+            wakeup: false,
+            key: "org.markpasc.paperplain.activate",
+            uri: "palm://com.palm.applicationManager/launch",
+            params: {
+                id: "org.markpasc.paperplain",
+                params: {"action": "swappaper"},
+            },
+            at: alarmAt,
+        },
+        onSuccess: function () { delete this.reqSchedule; if(succ) succ() },
+        onFailure: function () { delete this.reqSchedule; if(fail) fail() },
+    });
+};
+
+AppAssistant.prototype.unscheduleSwap = function (succ, fail) {
+    this.reqUnschedule = new Mojo.Service.Request("palm://com.palm.power/timeout", {
+        method: "clear",
+        parameters: {
+            key: "org.markpasc.paperplain.activate",
+        },
+        onSuccess: function () { delete this.reqUnschedule; if(succ) succ() },
+        onFailure: function () { delete this.reqUnschedule; if(fail) fail() },
+    });
 };

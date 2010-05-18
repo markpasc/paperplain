@@ -58,43 +58,22 @@ MainAssistant.prototype.handleEnable = function(event) {
 
     this.controller.get('enabled-spinner').mojo.start(); //removeClassName('hidden');
 
+    var appController = Mojo.Controller.getAppController();
     if (event.value) {
         // Set up the timer subscription?
         Mojo.Log.info("Trying to schedule paper swapping");
-
-        var now = new Date();
-        var then = now.getTime() + 10 * 1000;  // 10 seconds
-        var alarmTime = new Date(then);
-        var alarmAt = [alarmTime.getUTCMonth()+1, alarmTime.getUTCDate(), alarmTime.getUTCFullYear()].join('/')
-            + ' ' + [alarmTime.getUTCHours(), alarmTime.getUTCMinutes(), alarmTime.getUTCSeconds()].join(':')
-
-        this.controller.serviceRequest("palm://com.palm.power/timeout", {
-            method: "set",
-            parameters: {
-                wakeup: false,
-                key: "org.markpasc.paperplain.activate",
-                uri: "palm://com.palm.applicationManager/launch",
-                params: {
-                    id: "org.markpasc.paperplain",
-                    params: {"action": "swappaper"},
-                },
-                at: alarmAt,
-            },
-            onSuccess: this.enabled.bind(this),
-            onFailure: this.errorEnabling.bind(this),
-        });
+        appController.assistant.scheduleSwap(
+            this.enabled.bind(this),
+            this.errorEnabling.bind(this)
+        );
     }
     else {
         // Delete the timer subscription.
         Mojo.Log.info("Trying to unschedule paper swapping");
-        this.controller.serviceRequest("palm://com.palm.power/timeout", {
-            method: "clear",
-            parameters: {
-                key: "org.markpasc.paperplain.activate",
-            },
-            onSuccess: this.disabled.bind(this),
-            onFailure: this.errorDisabling.bind(this),
-        });
+        appController.assistant.unscheduleSwap(
+            this.disabled.bind(this),
+            this.errorDisabling.bind(this)
+        );
     }
 };
 
