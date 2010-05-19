@@ -3,7 +3,11 @@ function MainAssistant() {
        additional parameters (after the scene name) that were passed to pushScene. The reference
        to the scene controller (this.controller) has not be established yet, so any initialization
        that needs the scene controller should be done in the setup function below. */
-    this.paperdepot = new Mojo.Depot('wallpapers',
+    this.paperdepot = new Mojo.Depot({
+        name: 'wallpapers',
+        version: 1,
+        replace: false,
+    },
         function () { Mojo.Log.info("Yay opened wallpapers depot") },
         function (oops) { Mojo.Log.info("Oops, couldn't open depot: ", oops); }
     );
