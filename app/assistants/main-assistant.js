@@ -15,9 +15,9 @@ function MainAssistant() {
 
 MainAssistant.prototype.setup = function() {
     /* this function is for setup tasks that have to happen when the scene is first created */
-    
+
     /* use Mojo.View.render to render view templates and add them to the scene, if needed */
-    
+
     /* setup widgets here */
     this.controller.setupWidget('enabled-spinner', {}, { spinning: false });
     this.controller.setupWidget('enabled', {modelProperty:'value'}, this.enabledModel = {});
