@@ -22,7 +22,7 @@ def uninstall():
     call('palm-install', '--device=emulator', '-r', 'org.markpasc.paperplain')
 
 @task
-@needs('build', 'uninstall')
+@needs('build', 'halt')
 def push():
     """Reinstall the app and start it."""
     call('palm-install', '--device=emulator', 'org.markpasc.paperplain_1.0.0_all.ipk')
