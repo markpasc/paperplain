@@ -22,19 +22,21 @@ AppAssistant.prototype.handleLaunch = function (parameters) {
 AppAssistant.prototype.swapPaper = function () {
     Mojo.Log.info('SWAPPING WALLPAPER');
 
-    // Pick a file, any file.
-    var db;
-    db = new Mojo.Depot({ name: 'wallpapers' }, function () {
-        db.get('wallpapers', function (papers) {
+    var pickFromDepot = function () {
+        Mojo.Log.info("SWEET i opened the database");
 
+        var pickPaper = function (papers) {
             if (!papers) {
                 Mojo.Log.info("Tried to pick a new wallpaper, but there aren't any to choose from");
                 return;
             }
 
+            Mojo.Log.info("Yay, there are some wallpaper:", Object.toJSON(papers));
+            papers = papers.wallpapers;
+
             var that_one = Math.floor(Math.random() * papers.length);
             var paper = papers[that_one];
-            Mojo.Log.debug("Picked wallpaper " + paper);
+            Mojo.Log.info("Picked wallpaper " + paper);
 
             // Does that wallpaper exist?
             this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
@@ -49,7 +51,7 @@ AppAssistant.prototype.swapPaper = function () {
                 onFailure: function () {
                     delete this.reqSwap;
 
-                    Mojo.Log.debug("Couldn't info up that wallpaper; trying to import it");
+                    Mojo.Log.info("Couldn't info up that wallpaper; trying to import it");
                     this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
                         method: 'wallpaper/importWallpaper',
                         parameters: {
@@ -68,12 +70,16 @@ AppAssistant.prototype.swapPaper = function () {
                 }
             });
 
-        }, function (oops) {
+        };
+
+        this.paperdepot.get('wallpapers', pickPaper.bind(this), function (oops) {
             Mojo.Log.error("Couldn't get wallpapers out of database: " + oops);
         });
-    }, function (oops) {
-        Mojo.Log.error("Couldn't open database, what: " + oops);
-    });
+    };
+
+    // Pick a file, any file.
+    this.paperdepot = new Mojo.Depot({ name: 'wallpapers' }, pickFromDepot.bind(this),
+        function (oops) { Mojo.Log.error("Couldn't open database, what: " + oops) });
 };
 
 AppAssistant.prototype.setPaper = function (paper) {
@@ -85,7 +91,7 @@ AppAssistant.prototype.setPaper = function (paper) {
         },
         onSuccess: function () {
             delete this.reqSwap;
-            Mojo.Log.debug("Yay, set wallpaper!");
+            Mojo.Log.info("Yay, set wallpaper!");
         },
         onFailure: function (oops) {
             delete this.reqSwap;

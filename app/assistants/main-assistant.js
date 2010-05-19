@@ -3,6 +3,10 @@ function MainAssistant() {
        additional parameters (after the scene name) that were passed to pushScene. The reference
        to the scene controller (this.controller) has not be established yet, so any initialization
        that needs the scene controller should be done in the setup function below. */
+    this.paperdepot = new Mojo.Depot('wallpapers',
+        function () { Mojo.Log.info("Yay opened wallpapers depot") },
+        function (oops) { Mojo.Log.info("Oops, couldn't open depot: ", oops); }
+    );
 }
 
 MainAssistant.prototype.setup = function() {
@@ -13,10 +17,13 @@ MainAssistant.prototype.setup = function() {
     /* setup widgets here */
     this.controller.setupWidget('enabled-spinner', {}, { spinning: false });
     this.controller.setupWidget('enabled', {modelProperty:'value'}, this.enabledModel = {});
+    this.controller.setupWidget('addpaper');
 
     /* add event handlers to listen to events from widgets */
     Mojo.Event.listen(this.controller.get('enabled'), Mojo.Event.propertyChange,
         this.handleEnable.bind(this));
+    Mojo.Event.listen(this.controller.get('addpaper'), Mojo.Event.tap,
+        this.handleAddPaper.bind(this));
 };
 
 MainAssistant.prototype.enabled = function (obj) {
@@ -75,6 +82,35 @@ MainAssistant.prototype.handleEnable = function(event) {
             this.errorDisabling.bind(this)
         );
     }
+};
+
+MainAssistant.prototype.handleAddPaper = function (event) {
+    var stageController = Mojo.Controller.getAppController().getStageController('settings');
+
+    var addPaper = function (picked) {
+        var addPaperToDepot = function (papers) {
+            if (!papers)
+                papers = { wallpapers: [] };
+
+            Mojo.Log.info("YAY PAPERS AM ", Object.toJSON(papers));
+
+            papers.wallpapers.push(picked.fullPath);
+
+            this.paperdepot.add('wallpapers', papers, function () {
+                Mojo.Log.info("YAY SAVED A PAPER " + picked.fullPath);
+            }, function (oops) {
+                Mojo.Log.error("Couldn't save new wallpaper " + picked.fullPath + " to wallpapers: " + oops);
+            });
+        };
+
+        this.paperdepot.get('wallpapers', addPaperToDepot.bind(this));
+    };
+
+    Mojo.FilePicker.pickFile({
+        kinds: ['image'],
+        actionName: 'Add',
+        onSelect: addPaper.bind(this),
+    }, stageController);
 };
 
 MainAssistant.prototype.activate = function(event) {
