@@ -38,36 +38,38 @@ AppAssistant.prototype.swapPaper = function () {
             var paper = papers[that_one];
             Mojo.Log.info("Picked wallpaper " + paper);
 
+            var yaySetPaper = function (param) {
+                delete this.reqSwap;
+                this.setPaper(param.wallpaper);
+            };
+
+            var booImportPaper = function () {
+                delete this.reqSwap;
+
+                var failedToImport = function () {
+                    delete this.reqSwap;
+                    Mojo.Log.error("Couldn't import wallpaper " + paper + " :(");
+                };
+
+                Mojo.Log.info("Couldn't info up that wallpaper; trying to import it");
+                this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
+                    method: 'wallpaper/importWallpaper',
+                    parameters: {
+                        target: paper,
+                    },
+                    onSuccess: yaySetPaper.bind(this),
+                    onFailure: failedToImport.bind(this),
+                });
+            };
+
             // Does that wallpaper exist?
             this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
                 method: 'wallpaper/info',
                 parameters: {
                     wallpaperFile: paper,
                 },
-                onSuccess: function (param) {
-                    delete this.reqSwap;
-                    this.setPaper(param.wallpaper);
-                },
-                onFailure: function () {
-                    delete this.reqSwap;
-
-                    Mojo.Log.info("Couldn't info up that wallpaper; trying to import it");
-                    this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
-                        method: 'wallpaper/importWallpaper',
-                        parameters: {
-                            target: paper,
-                        },
-                        onSuccess: function (param) {
-                            delete this.reqSwap;
-                            this.setPaper(param.wallpaper);
-                        },
-                        onFailure: function () {
-                            delete this.reqSwap;
-                            Mojo.Log.error("Couldn't import wallpaper " + paper + " :(");
-                        },
-                    });
-
-                }
+                onSuccess: yaySetPaper.bind(this),
+                onFailure: booImportPaper.bind(this),
             });
 
         };
@@ -78,25 +80,35 @@ AppAssistant.prototype.swapPaper = function () {
     };
 
     // Pick a file, any file.
-    this.paperdepot = new Mojo.Depot({ name: 'wallpapers' }, pickFromDepot.bind(this),
-        function (oops) { Mojo.Log.error("Couldn't open database, what: " + oops) });
+    this.paperdepot = new Mojo.Depot({
+        name: 'wallpapers',
+        version: 1,
+        replace: false,
+    }, pickFromDepot.bind(this), function (oops) { Mojo.Log.error("Couldn't open database, what: " + oops) });
 };
 
 AppAssistant.prototype.setPaper = function (paper) {
     // Set the new wallpaper to be the current one.
-    this.reqSwap = Mojo.Service.Request('palm://com.palm.systemservice', {
+
+    var successSetPaper = function () {
+        delete this.reqSwap;
+        Mojo.Log.info("Yay, set wallpaper!");
+    };
+
+    var failedToSetPaper = function (oops) {
+        delete this.reqSwap;
+        Mojo.Log.error("Couldn't set wallpaper: " + oops.errorText);
+    };
+
+    Mojo.Log.info("Hmm, need to set wallpaper to", Object.toJSON(paper));
+    var params = { wallpaper: paper };
+    Mojo.Log.info("Setting wallpaper preference to", Object.toJSON(params));
+
+    this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
         method: 'setPreferences',
-        parameters: {
-            'wallpaper': param.wallpaper,
-        },
-        onSuccess: function () {
-            delete this.reqSwap;
-            Mojo.Log.info("Yay, set wallpaper!");
-        },
-        onFailure: function (oops) {
-            delete this.reqSwap;
-            Mojo.Log.error("Couldn't set wallpaper: " + oops.errorText);
-        },
+        parameters: params,
+        onSuccess: successSetPaper.bind(this),
+        onFailure: failedToSetPaper.bind(this),
     });
 }
 
