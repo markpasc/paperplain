@@ -23,6 +23,13 @@ MainAssistant.prototype.setup = function() {
     this.controller.setupWidget('enabled', {modelProperty:'value'}, this.enabledModel = {});
     this.controller.setupWidget('addpaper', {}, this.addpaperModel = { label: "Add wallpaper" });
 
+    // Snap the enabled switch to the correct setting, somewhen.
+    var updateSwitch = function (alreadyEnabled) {
+        this.enabledModel.value = alreadyEnabled;
+        this.controller.modelChanged(this.enabledModel);
+    };
+    this.paperdepot.get('enabled', updateSwitch.bind(this));
+
     /* add event handlers to listen to events from widgets */
     Mojo.Event.listen(this.controller.get('enabled'), Mojo.Event.propertyChange,
         this.handleEnable.bind(this));
@@ -31,8 +38,11 @@ MainAssistant.prototype.setup = function() {
 };
 
 MainAssistant.prototype.enabled = function (obj) {
-    this.controller.get('enabled-spinner').mojo.stop(); //addClassName('hidden');
-    Mojo.Log.info("Enabled paper swapping");
+    var reallyEnabled = function () {
+        this.controller.get('enabled-spinner').mojo.stop(); //addClassName('hidden');
+        Mojo.Log.info("Enabled paper swapping");
+    };
+    this.paperdepot.add('enabled', true, reallyEnabled.bind(this));
 };
 
 MainAssistant.prototype.errorEnabling = function (oops) {
@@ -47,8 +57,11 @@ MainAssistant.prototype.errorEnabling = function (oops) {
 };
 
 MainAssistant.prototype.disabled = function (obj) {
-    this.controller.get('enabled-spinner').addClassName('hidden');
-    Mojo.Log.info("Disabled paper swapping");
+    var reallyDisabled = function () {
+        this.controller.get('enabled-spinner').addClassName('hidden');
+        Mojo.Log.info("Disabled paper swapping");
+    };
+    this.paperdepot.add('enabled', false, reallyDisabled.bind(this));
 };
 
 MainAssistant.prototype.errorDisabling = function (oops) {
