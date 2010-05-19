@@ -1,6 +1,14 @@
 var MainStageName = 'settings';
 
 function AppAssistant(appController) {
+    this.paperdepot = new Mojo.Depot({
+        name: 'wallpapers',
+        version: 1,
+        replace: false,
+    },
+        function () { Mojo.Log.info("Yay app opened wallpapers depot") },
+        function (oops) { Mojo.Log.error("App couldn't open database, what:", oops) }
+    );
 }
 
 AppAssistant.prototype.handleLaunch = function (parameters) {
@@ -11,8 +19,15 @@ AppAssistant.prototype.handleLaunch = function (parameters) {
     }
     else if (parameters.action == 'swappaper') {
         Mojo.Log.info("YAY SWAPPAPER ACTION");
-        this.scheduleSwap();
-        this.swapPaper();
+        // Check that we're really enabled.
+        var reallySwap = function (enabled) {
+            if (!enabled)
+                return;
+
+            this.scheduleSwap();
+            this.swapPaper();
+        };
+        this.paperdepot.get('enabled', reallySwap.bind(this));
     }
     else {
         Mojo.Log.info("Hmm, unrecognized action parameter '" + parameters.action + "'");
@@ -22,69 +37,59 @@ AppAssistant.prototype.handleLaunch = function (parameters) {
 AppAssistant.prototype.swapPaper = function () {
     Mojo.Log.info('SWAPPING WALLPAPER');
 
-    var pickFromDepot = function () {
-        Mojo.Log.info("SWEET i opened the database");
+    // Pick a file, any file.
+    var pickPaper = function (papers) {
+        if (!papers) {
+            Mojo.Log.info("Tried to pick a new wallpaper, but there aren't any to choose from");
+            return;
+        }
 
-        var pickPaper = function (papers) {
-            if (!papers) {
-                Mojo.Log.info("Tried to pick a new wallpaper, but there aren't any to choose from");
-                return;
-            }
+        Mojo.Log.info("Yay, there are some wallpaper:", Object.toJSON(papers));
+        papers = papers.wallpapers;
 
-            Mojo.Log.info("Yay, there are some wallpaper:", Object.toJSON(papers));
-            papers = papers.wallpapers;
+        var that_one = Math.floor(Math.random() * papers.length);
+        var paper = papers[that_one];
+        Mojo.Log.info("Picked wallpaper " + paper);
 
-            var that_one = Math.floor(Math.random() * papers.length);
-            var paper = papers[that_one];
-            Mojo.Log.info("Picked wallpaper " + paper);
-
-            var yaySetPaper = function (param) {
-                delete this.reqSwap;
-                this.setPaper(param.wallpaper);
-            };
-
-            var booImportPaper = function () {
-                delete this.reqSwap;
-
-                var failedToImport = function () {
-                    delete this.reqSwap;
-                    Mojo.Log.error("Couldn't import wallpaper " + paper + " :(");
-                };
-
-                Mojo.Log.info("Couldn't info up that wallpaper; trying to import it");
-                this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
-                    method: 'wallpaper/importWallpaper',
-                    parameters: {
-                        target: paper,
-                    },
-                    onSuccess: yaySetPaper.bind(this),
-                    onFailure: failedToImport.bind(this),
-                });
-            };
-
-            // Does that wallpaper exist?
-            this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
-                method: 'wallpaper/info',
-                parameters: {
-                    wallpaperFile: paper,
-                },
-                onSuccess: yaySetPaper.bind(this),
-                onFailure: booImportPaper.bind(this),
-            });
-
+        var yaySetPaper = function (param) {
+            delete this.reqSwap;
+            this.setPaper(param.wallpaper);
         };
 
-        this.paperdepot.get('wallpapers', pickPaper.bind(this), function (oops) {
-            Mojo.Log.error("Couldn't get wallpapers out of database: " + oops);
+        var booImportPaper = function () {
+            delete this.reqSwap;
+
+            var failedToImport = function () {
+                delete this.reqSwap;
+                Mojo.Log.error("Couldn't import wallpaper " + paper + " :(");
+            };
+
+            Mojo.Log.info("Couldn't info up that wallpaper; trying to import it");
+            this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
+                method: 'wallpaper/importWallpaper',
+                parameters: {
+                    target: paper,
+                },
+                onSuccess: yaySetPaper.bind(this),
+                onFailure: failedToImport.bind(this),
+            });
+        };
+
+        // Does that wallpaper exist?
+        this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
+            method: 'wallpaper/info',
+            parameters: {
+                wallpaperFile: paper,
+            },
+            onSuccess: yaySetPaper.bind(this),
+            onFailure: booImportPaper.bind(this),
         });
+
     };
 
-    // Pick a file, any file.
-    this.paperdepot = new Mojo.Depot({
-        name: 'wallpapers',
-        version: 1,
-        replace: false,
-    }, pickFromDepot.bind(this), function (oops) { Mojo.Log.error("Couldn't open database, what: " + oops) });
+    this.paperdepot.get('wallpapers', pickPaper.bind(this), function (oops) {
+        Mojo.Log.error("Couldn't get wallpapers out of database: " + oops);
+    });
 };
 
 AppAssistant.prototype.setPaper = function (paper) {
@@ -144,21 +149,24 @@ AppAssistant.prototype.scheduleSwap = function (succ, fail) {
     var alarmAt = [alarmTime.getUTCMonth()+1, alarmTime.getUTCDate(), alarmTime.getUTCFullYear()].join('/')
         + ' ' + [alarmTime.getUTCHours(), alarmTime.getUTCMinutes(), alarmTime.getUTCSeconds()].join(':')
 
-    this.reqSchedule = new Mojo.Service.Request("palm://com.palm.power/timeout", {
-        method: "set",
-        parameters: {
-            wakeup: false,
-            key: "org.markpasc.paperplain.activate",
-            uri: "palm://com.palm.applicationManager/launch",
-            params: {
-                id: "org.markpasc.paperplain",
-                params: {"action": "swappaper"},
+    var reallySchedule = function () {
+        this.reqSchedule = new Mojo.Service.Request("palm://com.palm.power/timeout", {
+            method: "set",
+            parameters: {
+                wakeup: false,
+                key: "org.markpasc.paperplain.activate",
+                uri: "palm://com.palm.applicationManager/launch",
+                params: {
+                    id: "org.markpasc.paperplain",
+                    params: {"action": "swappaper"},
+                },
+                at: alarmAt,
             },
-            at: alarmAt,
-        },
-        onSuccess: function () { delete this.reqSchedule; if(succ) succ() },
-        onFailure: function () { delete this.reqSchedule; if(fail) fail() },
-    });
+            onSuccess: function () { delete this.reqSchedule; if(succ) succ() },
+            onFailure: function () { delete this.reqSchedule; if(fail) fail() },
+        });
+    };
+    this.unscheduleSwap(reallySchedule.bind(this));
 };
 
 AppAssistant.prototype.unscheduleSwap = function (succ, fail) {
