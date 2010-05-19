@@ -21,7 +21,7 @@ MainAssistant.prototype.setup = function() {
     /* setup widgets here */
     this.controller.setupWidget('enabled-spinner', {}, { spinning: false });
     this.controller.setupWidget('enabled', {modelProperty:'value'}, this.enabledModel = {});
-    this.controller.setupWidget('addpaper');
+    this.controller.setupWidget('addpaper', {}, this.addpaperModel = { label: "Add wallpaper" });
 
     /* add event handlers to listen to events from widgets */
     Mojo.Event.listen(this.controller.get('enabled'), Mojo.Event.propertyChange,
