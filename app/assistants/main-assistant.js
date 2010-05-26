@@ -40,24 +40,27 @@ MainAssistant.prototype.setup = function() {
     };
     this.paperdepot.get('enabled', updateSwitch.bind(this));
 
-    var updateSelectedWallpaper = function (paper) {
-        var papers = paper.wallpapers.slice(0);
-        Mojo.Log.info('Updating wallpaper list with', typeof papers, papers);
-        for (var i = 0; i < papers.length; i++) {
-            papers[i] = {'fullpath': papers[i]};
-        }
-        this.selectedModel.items = papers;
-        Mojo.Log.info('Yay infos are now', this.selectedModel.items);
-        this.controller.modelChanged(this.selectedModel);
-    };
     Mojo.Log.info('Filling list with "wallpapers" infos from depot');
-    this.paperdepot.get('wallpapers', updateSelectedWallpaper.bind(this));
+    this.paperdepot.get('wallpapers', this.updateSelectedWallpaper.bind(this));
 
     /* add event handlers to listen to events from widgets */
     Mojo.Event.listen(this.controller.get('enabled'), Mojo.Event.propertyChange,
         this.handleEnable.bind(this));
     Mojo.Event.listen(this.controller.get('selected-wallpaper'), Mojo.Event.listAdd,
         this.handleAddPaper.bind(this));
+    Mojo.Event.listen(this.controller.get('selected-wallpaper'), Mojo.Event.listDelete,
+        this.handleDeletePaper.bind(this));
+};
+
+MainAssistant.prototype.updateSelectedWallpaper = function (paper) {
+    var papers = paper.wallpapers.slice(0);
+    Mojo.Log.info('Updating wallpaper list with', typeof papers, papers);
+    for (var i = 0; i < papers.length; i++) {
+        papers[i] = {'fullpath': papers[i]};
+    }
+    this.selectedModel.items = papers;
+    Mojo.Log.info('Yay infos are now', this.selectedModel.items);
+    this.controller.modelChanged(this.selectedModel);
 };
 
 MainAssistant.prototype.enabled = function (obj) {
@@ -135,6 +138,7 @@ MainAssistant.prototype.handleAddPaper = function (event) {
             Mojo.Log.info("YAY PAPERS AM ", Object.toJSON(papers));
 
             papers.wallpapers.push(picked.fullPath);
+            this.updateSelectedWallpaper(papers);
 
             this.paperdepot.add('wallpapers', papers, function () {
                 Mojo.Log.info("YAY SAVED A PAPER " + picked.fullPath);
@@ -151,6 +155,27 @@ MainAssistant.prototype.handleAddPaper = function (event) {
         actionName: 'Add',
         onSelect: addPaper.bind(this),
     }, stageController);
+};
+
+MainAssistant.prototype.handleDeletePaper = function (event) {
+    var item = event.item;
+    Mojo.Log.info('Huh deleting', item, 'i guess');
+
+    var removePaperFromDepot = function (papers) {
+        if (!papers || !papers.wallpapers)
+            return;
+
+        var wallp = papers.wallpapers;
+        wallp.splice(wallp.indexOf(item.fullpath), 1);
+
+        this.paperdepot.add('wallpapers', papers, function () {
+            Mojo.Log.info("YAY SAVED PAPERFREE PAPER");
+        }, function (err) {
+            Mojo.Log.error("Oops, could not save paperfree paper:", err);
+        });
+    };
+
+    this.paperdepot.get('wallpapers', removePaperFromDepot.bind(this));
 };
 
 MainAssistant.prototype.activate = function(event) {
