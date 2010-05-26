@@ -38,24 +38,45 @@ AppAssistant.prototype.swapPaper = function () {
     Mojo.Log.info('SWAPPING WALLPAPER');
 
     // Pick a file, any file.
-    var pickPaper = function (papers) {
-        if (!papers) {
+    var pickPaper = function (paperdata) {
+        if (!paperdata || !paperdata.wallpapers || !paperdata.wallpapers.length) {
             Mojo.Log.info("Tried to pick a new wallpaper, but there aren't any to choose from");
             return;
         }
 
-        Mojo.Log.info("Yay, there are some wallpaper:", Object.toJSON(papers));
-        papers = papers.wallpapers;
+        Mojo.Log.info("Yay, there are some wallpaper:", Object.toJSON(paperdata));
+        paperfiles = paperdata.wallpapers;
 
-        var thatOne = Math.floor(Math.random() * papers.length);
-        var paper = papers[thatOne];
+        var thatOne = Math.floor(Math.random() * paperfiles.length);
+        var paper = paperfiles[thatOne];
         Mojo.Log.info("Picked wallpaper " + paper);
 
-        this.setPaperToFile(paper);
+        var putThatPaper = function () {
+            this.setPaperToFile(paper);
+        };
+
+        paperfiles.splice(thatOne, 1);
+        this.paperdepot.add('papercycle', paperdata, putThatPaper.bind(this), function (oops) {
+            Mojo.Log.error("Couldn't save papercycle back to db:", oops);
+        });
     };
 
-    this.paperdepot.get('wallpapers', pickPaper.bind(this), function (oops) {
-        Mojo.Log.error("Couldn't get wallpapers out of database: " + oops);
+    var pickPaperFromCycle = function (paperdata) {
+        if (!paperdata || !paperdata.wallpapers || !paperdata.wallpapers.length) {
+            Mojo.Log.info("Oops, the cycle is empty; let's refill it");
+
+            this.paperdepot.get('wallpapers', pickPaper.bind(this), function (oops) {
+                Mojo.Log.error("Couldn't get wallpapers out of database:", oops);
+            });
+            return;
+        }
+
+        Mojo.Log.info("Yay we have some papercycle left:", Object.toJSON(paperdata));
+        (pickPaper.bind(this))(paperdata);
+    }
+
+    this.paperdepot.get('papercycle', pickPaperFromCycle.bind(this), function (oops) {
+        Mojo.Log.error("Couldn't get paper cycle out of database:", oops);
     });
 };
 

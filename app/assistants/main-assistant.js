@@ -118,6 +118,8 @@ MainAssistant.prototype.handleEnable = function(event) {
         );
     }
     else {
+        this.paperdepot.discard('papercycle');
+
         // Delete the timer subscription.
         Mojo.Log.info("Trying to unschedule paper swapping");
         appController.assistant.unscheduleSwap(
@@ -131,23 +133,25 @@ MainAssistant.prototype.handleAddPaper = function (event) {
     var stageController = Mojo.Controller.getAppController().getStageController('settings');
 
     var addPaper = function (picked) {
-        var addPaperToDepot = function (papers) {
+        var addPaperToWallpapers = function (papers) {
             if (!papers)
                 papers = { wallpapers: [] };
 
-            Mojo.Log.info("YAY PAPERS AM ", Object.toJSON(papers));
+            papers.wallpapers.push(picked.fullPath);
+            this.paperdepot.add('wallpapers', papers);
+
+            this.updateSelectedWallpaper(papers);
+        };
+        this.paperdepot.get('wallpapers', addPaperToWallpapers.bind(this));
+
+        var addPaperToCycle = function (papers) {
+            if (!papers)
+                papers = { wallpapers: [] };
 
             papers.wallpapers.push(picked.fullPath);
-            this.updateSelectedWallpaper(papers);
-
-            this.paperdepot.add('wallpapers', papers, function () {
-                Mojo.Log.info("YAY SAVED A PAPER " + picked.fullPath);
-            }, function (oops) {
-                Mojo.Log.error("Couldn't save new wallpaper " + picked.fullPath + " to wallpapers: " + oops);
-            });
+            this.paperdepot.add('papercycle', papers);
         };
-
-        this.paperdepot.get('wallpapers', addPaperToDepot.bind(this));
+        this.paperdepot.get('papercycle', addPaperToCycle.bind(this));
     };
 
     Mojo.FilePicker.pickFile({
@@ -161,21 +165,38 @@ MainAssistant.prototype.handleDeletePaper = function (event) {
     var item = event.item;
     Mojo.Log.info('Huh deleting', item, 'i guess');
 
-    var removePaperFromDepot = function (papers) {
-        if (!papers || !papers.wallpapers)
+    var removePaperFromWallpapers = function (papers) {
+        if (!papers || !papers.wallpapers || !papers.wallpapers.length)
             return;
 
         var wallp = papers.wallpapers;
-        wallp.splice(wallp.indexOf(item.fullpath), 1);
+        var itemInWallpapers = wallp.indexOf(item.fullpath);
+        if (itemInWallpapers == -1) {
+            Mojo.Log.info("Wanted to remove", item.fullpath, "from wallpapers, but it's already not there");
+            return;
+        }
 
-        this.paperdepot.add('wallpapers', papers, function () {
-            Mojo.Log.info("YAY SAVED PAPERFREE PAPER");
-        }, function (err) {
-            Mojo.Log.error("Oops, could not save paperfree paper:", err);
-        });
+        wallp.splice(itemInWallpapers, 1);
+        this.paperdepot.add('wallpapers', papers);
+        // The list deleter already removed the item, so don't need to re-update it.
     };
+    this.paperdepot.get('wallpapers', removePaperFromWallpapers.bind(this));
 
-    this.paperdepot.get('wallpapers', removePaperFromDepot.bind(this));
+    var removePaperFromCycle = function (papers) {
+        if (!papers || !papers.wallpapers || !papers.wallpapers.length)
+            return;
+
+        var wallp = papers.wallpapers;
+        var itemInWallpapers = wallp.indexOf(item.fullpath);
+        if (itemInWallpapers == -1) {
+            Mojo.Log.info("Wanted to remove", item.fullpath, "from cycle, but it's already not there");
+            return;
+        }
+
+        wallp.splice(itemInWallpapers, 1);
+        this.paperdepot.add('papercycle', papers);
+    };
+    this.paperdepot.get('papercycle', removePaperFromCycle.bind(this));
 };
 
 MainAssistant.prototype.activate = function(event) {
