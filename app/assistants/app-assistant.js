@@ -47,48 +47,51 @@ AppAssistant.prototype.swapPaper = function () {
         Mojo.Log.info("Yay, there are some wallpaper:", Object.toJSON(papers));
         papers = papers.wallpapers;
 
-        var that_one = Math.floor(Math.random() * papers.length);
-        var paper = papers[that_one];
+        var thatOne = Math.floor(Math.random() * papers.length);
+        var paper = papers[thatOne];
         Mojo.Log.info("Picked wallpaper " + paper);
 
-        var yaySetPaper = function (param) {
-            delete this.reqSwap;
-            this.setPaper(param.wallpaper);
-        };
-
-        var booImportPaper = function () {
-            delete this.reqSwap;
-
-            var failedToImport = function () {
-                delete this.reqSwap;
-                Mojo.Log.error("Couldn't import wallpaper " + paper + " :(");
-            };
-
-            Mojo.Log.info("Couldn't info up that wallpaper; trying to import it");
-            this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
-                method: 'wallpaper/importWallpaper',
-                parameters: {
-                    target: paper,
-                },
-                onSuccess: yaySetPaper.bind(this),
-                onFailure: failedToImport.bind(this),
-            });
-        };
-
-        // Does that wallpaper exist?
-        this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
-            method: 'wallpaper/info',
-            parameters: {
-                wallpaperFile: paper,
-            },
-            onSuccess: yaySetPaper.bind(this),
-            onFailure: booImportPaper.bind(this),
-        });
-
+        this.setPaperToFile(paper);
     };
 
     this.paperdepot.get('wallpapers', pickPaper.bind(this), function (oops) {
         Mojo.Log.error("Couldn't get wallpapers out of database: " + oops);
+    });
+};
+
+AppAssistant.prototype.setPaperToFile = function (paperpath) {
+    var yaySetPaper = function (param) {
+        delete this.reqSwap;
+        this.setPaper(param.wallpaper);
+    };
+
+    var booImportPaper = function () {
+        delete this.reqSwap;
+
+        var failedToImport = function () {
+            delete this.reqSwap;
+            Mojo.Log.error("Couldn't import wallpaper", paperpath, ":(");
+        };
+
+        Mojo.Log.info("Couldn't info up that wallpaper; trying to import it");
+        this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
+            method: 'wallpaper/importWallpaper',
+            parameters: {
+                target: paperpath,
+            },
+            onSuccess: yaySetPaper.bind(this),
+            onFailure: failedToImport.bind(this),
+        });
+    };
+
+    // Does that wallpaper exist?
+    this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
+        method: 'wallpaper/info',
+        parameters: {
+            wallpaperFile: paperpath,
+        },
+        onSuccess: yaySetPaper.bind(this),
+        onFailure: booImportPaper.bind(this),
     });
 };
 
