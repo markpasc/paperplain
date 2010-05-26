@@ -21,7 +21,17 @@ MainAssistant.prototype.setup = function() {
     /* setup widgets here */
     this.controller.setupWidget('enabled-spinner', {}, { spinning: false });
     this.controller.setupWidget('enabled', {modelProperty:'value'}, this.enabledModel = {});
-    this.controller.setupWidget('addpaper', {}, this.addpaperModel = { label: "Add wallpaper" });
+    this.controller.setupWidget('selected-wallpaper', {
+        listTemplate: 'main/papers-list',
+        itemTemplate: 'main/papers-item',
+        swipeToDelete: true,
+        autoconfirmDelete: false,
+        addItemLabel: 'Add',
+        onItemRendered: function () { Mojo.Log.info('YAY RENDER ITEM') }
+    }, this.selectedModel = {
+        listTitle: "Selected wallpaper",
+        items: []
+    });
 
     // Snap the enabled switch to the correct setting, somewhen.
     var updateSwitch = function (alreadyEnabled) {
@@ -30,10 +40,23 @@ MainAssistant.prototype.setup = function() {
     };
     this.paperdepot.get('enabled', updateSwitch.bind(this));
 
+    var updateSelectedWallpaper = function (paper) {
+        var papers = paper.wallpapers.slice(0);
+        Mojo.Log.info('Updating wallpaper list with', typeof papers, papers);
+        for (var i = 0; i < papers.length; i++) {
+            papers[i] = {'fullpath': papers[i]};
+        }
+        this.selectedModel.items = papers;
+        Mojo.Log.info('Yay infos are now', this.selectedModel.items);
+        this.controller.modelChanged(this.selectedModel);
+    };
+    Mojo.Log.info('Filling list with "wallpapers" infos from depot');
+    this.paperdepot.get('wallpapers', updateSelectedWallpaper.bind(this));
+
     /* add event handlers to listen to events from widgets */
     Mojo.Event.listen(this.controller.get('enabled'), Mojo.Event.propertyChange,
         this.handleEnable.bind(this));
-    Mojo.Event.listen(this.controller.get('addpaper'), Mojo.Event.tap,
+    Mojo.Event.listen(this.controller.get('selected-wallpaper'), Mojo.Event.listAdd,
         this.handleAddPaper.bind(this));
 };
 
