@@ -53,6 +53,9 @@ MainAssistant.prototype.setup = function() {
 };
 
 MainAssistant.prototype.updateSelectedWallpaper = function (paper) {
+    if (!paper || !paper.wallpapers)
+        paper = { wallpapers: [] };
+
     var papers = paper.wallpapers.slice(0);
     Mojo.Log.info('Updating wallpaper list with', typeof papers, papers);
     for (var i = 0; i < papers.length; i++) {
@@ -133,11 +136,15 @@ MainAssistant.prototype.handleAddPaper = function (event) {
     var stageController = Mojo.Controller.getAppController().getStageController('settings');
 
     var addPaper = function (picked) {
+        // Here in javascriptland we need to use a URI-escaped version of
+        // this path, and yet the file picker didn't escape it. Awesome.
+        var fullPath = picked.fullPath.replace(/ /g, '%20');
+
         var addPaperToWallpapers = function (papers) {
             if (!papers)
                 papers = { wallpapers: [] };
 
-            papers.wallpapers.push(picked.fullPath);
+            papers.wallpapers.push(fullPath);
             this.paperdepot.add('wallpapers', papers);
 
             this.updateSelectedWallpaper(papers);
@@ -148,7 +155,7 @@ MainAssistant.prototype.handleAddPaper = function (event) {
             if (!papers)
                 papers = { wallpapers: [] };
 
-            papers.wallpapers.push(picked.fullPath);
+            papers.wallpapers.push(fullPath);
             this.paperdepot.add('papercycle', papers);
         };
         this.paperdepot.get('papercycle', addPaperToCycle.bind(this));
