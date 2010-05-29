@@ -89,16 +89,16 @@ AppAssistant.prototype.setPaperToFile = function (paperpath) {
     var booImportPaper = function () {
         delete this.reqSwap;
 
-        var failedToImport = function () {
+        var failedToImport = function (oops) {
             delete this.reqSwap;
-            Mojo.Log.error("Couldn't import wallpaper", paperpath, ":(");
+            Mojo.Log.error("Couldn't import wallpaper", paperpath, ":(", Object.toJSON(oops));
         };
 
         Mojo.Log.info("Couldn't info up that wallpaper; trying to import it");
         this.reqSwap = new Mojo.Service.Request('palm://com.palm.systemservice', {
             method: 'wallpaper/importWallpaper',
             parameters: {
-                target: paperpath,
+                target: paperpath
             },
             onSuccess: yaySetPaper.bind(this),
             onFailure: failedToImport.bind(this),
@@ -168,7 +168,8 @@ AppAssistant.prototype.launchStage = function () {
 
 AppAssistant.prototype.scheduleSwap = function (succ, fail) {
     var now = new Date();
-    var then = now.getTime() + 30 * 1000;  // 30 seconds
+    //var then = now.getTime() + 1000 * 30;  // 30 seconds
+    var then = now.getTime() + 1000 * 60 * 60 * 6;  // 6 hours
     var alarmTime = new Date(then);
     var alarmAt = [alarmTime.getUTCMonth()+1, alarmTime.getUTCDate(), alarmTime.getUTCFullYear()].join('/')
         + ' ' + [alarmTime.getUTCHours(), alarmTime.getUTCMinutes(), alarmTime.getUTCSeconds()].join(':')
